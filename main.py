@@ -13,9 +13,11 @@ LEADERBOARD_CHANNEL = int(os.getenv('LEADERBOARD_CHANNEL', '0'))
 
 # Competition maps - Campaign maps 1, 2, and 7
 COMPETITION_MAPS = {
-    1: "Campaign 01",
-    2: "Campaign 02", 
-    7: "Campaign 07"
+    1: "ZOOP 01",
+    2: "Dirty Swervy 02", 
+    3: "Cold and Mad 03",
+    4: "Grassy Guy 04", 
+    5: "Cold and Mad Pt 2 05"
 }
 
 class CampaignBot(commands.Bot):
