@@ -111,12 +111,26 @@ async def submit_time(ctx, map_num: int, *, time_str: str):
     try:
         tm_username = result.data[0]['tm_username']
         
-        # Upsert time (insert or update if exists)
-        bot.supabase.table('times').upsert({
+        # Get player's previous best time for this map
+        previous_times = bot.supabase.table('times').select('time_ms').eq('discord_id', str(ctx.author.id)).eq('map_number', map_num).order('time_ms', desc=False).limit(1).execute()
+        
+        previous_best = previous_times.data[0]['time_ms'] if previous_times.data else None
+        is_improvement = previous_best is None or time_ms < previous_best
+        
+        # Insert new time into time_history (tracks all submissions)
+        bot.supabase.table('time_history').insert({
             'discord_id': str(ctx.author.id),
             'map_number': map_num,
             'time_ms': time_ms
         }).execute()
+        
+        # Update current best time in times table (for leaderboards)
+        if is_improvement:
+            bot.supabase.table('times').upsert({
+                'discord_id': str(ctx.author.id),
+                'map_number': map_num,
+                'time_ms': time_ms
+            }).execute()
 
         formatted_time = format_time(time_ms)
         
@@ -124,6 +138,16 @@ async def submit_time(ctx, map_num: int, *, time_str: str):
         embed.add_field(name="Player", value=tm_username, inline=True)
         embed.add_field(name="Map", value=f"Campaign {map_num:02d}", inline=True)
         embed.add_field(name="Time", value=formatted_time, inline=True)
+
+        # Show improvement or comparison
+        if previous_best is not None:
+            diff = previous_best - time_ms
+            if diff > 0:
+                embed.add_field(name="📈 Improvement!", value=f"-{format_time(diff)}", inline=True)
+            elif diff < 0:
+                embed.add_field(name="⚠️", value=f"Previous best: {format_time(previous_best)}", inline=True)
+            else:
+                embed.add_field(name="🔄", value="Same as previous best", inline=True)
 
         # Check position on map leaderboard
         position = await get_player_position(map_num, ctx.author.id)
