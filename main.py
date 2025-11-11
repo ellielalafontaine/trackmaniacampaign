@@ -4,11 +4,10 @@ import os
 import re
 from typing import Optional, List, Dict
 from supabase import create_client, Client
-
 from flask import Flask
 from threading import Thread
 
-# Keep-alive web server
+# Keep-alive web server for Render
 app = Flask('')
 
 @app.route('/')
@@ -20,20 +19,24 @@ def health():
     return {"status": "alive", "bot": bot.user.name if bot.user else "starting"}, 200
 
 def run_flask():
-    app.run(host='0.0.0.0', port=8080)
+    port = int(os.environ.get('PORT', 8080))  # Render provides PORT env var
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 def keep_alive():
+    port = int(os.environ.get('PORT', 8080))
+    print(f"🌐 Starting keep-alive web server on port {port}...")
     t = Thread(target=run_flask)
     t.daemon = True
     t.start()
-    
+    print("✅ Web server thread started!")
+
 # Bot configuration
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 LEADERBOARD_CHANNEL = int(os.getenv('LEADERBOARD_CHANNEL', '0'))
 
-# Competition maps - Campaign maps 1, 2, and 7
+# Competition maps - 5 maps total
 COMPETITION_MAPS = {
     1: "ZOOP 01",
     2: "Dirty Swervy 02", 
@@ -171,7 +174,8 @@ async def show_leaderboard(ctx):
             description += "**Overall Standings**\n"
             for i, player in enumerate(overall[:10]):
                 medal = medals[i] if i < 3 else f"#{i+1}"
-                description += f"{medal} {player['tm_username']} — {player['points']} pts ({player['maps_completed']}/3 maps)\n"
+                total_maps = len(COMPETITION_MAPS)
+                description += f"{medal} {player['tm_username']} — {player['points']} pts ({player['maps_completed']}/{total_maps} maps)\n"
         
         embed = discord.Embed(
             title="🏁 Campaign Competition",
@@ -283,7 +287,7 @@ async def show_help(ctx):
     """Show all commands"""
     embed = discord.Embed(
         title="🏁 Campaign Competition Commands",
-        description="2-week competition on Campaign maps 01, 02, and 07",
+        description="2-week competition on 5 Campaign maps",
         color=discord.Color.blue()
     )
     
@@ -300,7 +304,7 @@ async def show_help(ctx):
         name="📊 Leaderboards",
         value=(
             "`!tm leaderboard` - View full leaderboard\n"
-            "`!tm map <number>` - View specific map (1, 2, or 7)\n"
+            "`!tm map <number>` - View specific map (1-5)\n"
             "`!tm mystats` - View your personal stats"
         ),
         inline=False
@@ -425,5 +429,5 @@ if __name__ == "__main__":
         exit(1)
     
     print("🚀 Starting Campaign Competition Bot...")
-    keep_alive()
+    keep_alive()  # Start web server for Render
     bot.run(TOKEN)
