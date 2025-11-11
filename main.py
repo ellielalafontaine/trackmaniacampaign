@@ -5,6 +5,28 @@ import re
 from typing import Optional, List, Dict
 from supabase import create_client, Client
 
+from flask import Flask
+from threading import Thread
+
+# Keep-alive web server
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is running!", 200
+
+@app.route('/health')
+def health():
+    return {"status": "alive", "bot": bot.user.name if bot.user else "starting"}, 200
+
+def run_flask():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run_flask)
+    t.daemon = True
+    t.start()
+    
 # Bot configuration
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 SUPABASE_URL = os.getenv('SUPABASE_URL')
