@@ -425,4 +425,5 @@ if __name__ == "__main__":
         exit(1)
     
     print("🚀 Starting Campaign Competition Bot...")
+    keep_alive()
     bot.run(TOKEN)
